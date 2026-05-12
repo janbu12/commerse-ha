@@ -1,0 +1,365 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (instance, route, method) (rate(http_requests_total{job=\"ecommerce-api\"}[5m]))", "legendFormat": "{{instance}} {{method}} {{route}}", "refId": "A" }
+      ],
+      "title": "API Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{job=\"ecommerce-api\",status_code=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=\"ecommerce-api\"}[5m])), 0.001)", "legendFormat": "5xx ratio", "refId": "A" },
+        { "expr": "sum(rate(http_requests_total{job=\"ecommerce-api\",status_code=~\"4..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=\"ecommerce-api\"}[5m])), 0.001)", "legendFormat": "4xx ratio", "refId": "B" }
+      ],
+      "title": "API Error Ratio",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=\"ecommerce-api\"}[5m])))", "legendFormat": "p50 {{route}}", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=\"ecommerce-api\"}[5m])))", "legendFormat": "p95 {{route}}", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=\"ecommerce-api\"}[5m])))", "legendFormat": "p99 {{route}}", "refId": "C" }
+      ],
+      "title": "API Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 6 },
+      "id": 4,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum(rate(checkout_attempts_total{job=\"ecommerce-api\"}[5m]))", "legendFormat": "attempts", "refId": "A" },
+        { "expr": "sum(rate(checkout_success_total{job=\"ecommerce-api\"}[5m]))", "legendFormat": "success", "refId": "B" },
+        { "expr": "sum by (reason) (rate(checkout_failure_total{job=\"ecommerce-api\"}[5m]))", "legendFormat": "failure {{reason}}", "refId": "C" }
+      ],
+      "title": "Checkout Flow",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 6 },
+      "id": 5,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum(rate(checkout_success_total{job=\"ecommerce-api\"}[5m])) / clamp_min(sum(rate(checkout_attempts_total{job=\"ecommerce-api\"}[5m])), 0.001)", "legendFormat": "checkout success ratio", "refId": "A" }
+      ],
+      "title": "Checkout Success Ratio",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 6 },
+      "id": 6,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (result, reason) (rate(payment_webhooks_total{job=\"ecommerce-api\"}[5m]))", "legendFormat": "{{result}} {{reason}}", "refId": "A" },
+        { "expr": "sum(rate(payment_success_total{job=\"ecommerce-api\"}[5m]))", "legendFormat": "payment success", "refId": "B" }
+      ],
+      "title": "Payment Webhooks",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 12 },
+      "id": 7,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" },
+      "targets": [
+        { "expr": "sum(pg_stat_activity_count{job=\"postgres\"})", "legendFormat": "connections", "refId": "A" }
+      ],
+      "title": "Postgres Connections",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 12 },
+      "id": 8,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum(rate(pg_stat_database_xact_commit{job=\"postgres\"}[5m]))", "legendFormat": "commit", "refId": "A" },
+        { "expr": "sum(rate(pg_stat_database_xact_rollback{job=\"postgres\"}[5m]))", "legendFormat": "rollback", "refId": "B" }
+      ],
+      "title": "Postgres Transactions",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 12 },
+      "id": 9,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" },
+      "targets": [
+        { "expr": "max(redis_memory_used_bytes{job=\"redis\"})", "legendFormat": "used memory", "refId": "A" }
+      ],
+      "title": "Redis Memory",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 12 },
+      "id": 10,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum(rate(redis_keyspace_hits_total{job=\"redis\"}[5m])) / clamp_min(sum(rate(redis_keyspace_hits_total{job=\"redis\"}[5m])) + sum(rate(redis_keyspace_misses_total{job=\"redis\"}[5m])), 0.001)", "legendFormat": "hit ratio", "refId": "A" }
+      ],
+      "title": "Redis Cache Hit Ratio",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 18 },
+      "id": 11,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (proxy, server) (haproxy_server_status{job=\"haproxy\",proxy=\"ecommerce_api\",state=\"UP\"})", "legendFormat": "{{proxy}}/{{server}}", "refId": "A" }
+      ],
+      "title": "HAProxy Backend Health",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 18 },
+      "id": 12,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (proxy) (rate(haproxy_backend_http_responses_total{job=\"haproxy\"}[5m]))", "legendFormat": "{{proxy}}", "refId": "A" }
+      ],
+      "title": "HAProxy Response Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 18 },
+      "id": 13,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (container_name) (rate(podman_container_cpu_system_seconds_total[5m]))", "legendFormat": "{{container_name}}", "refId": "A" }
+      ],
+      "title": "Container CPU (Podman)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 24 },
+      "id": 14,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (container_name) (podman_container_mem_usage_bytes)", "legendFormat": "{{container_name}}", "refId": "A" }
+      ],
+      "title": "Container Memory (Podman)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 24 },
+      "id": 15,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "1 - avg(rate(node_cpu_seconds_total{job=\"node-exporter\",mode=\"idle\"}[5m]))", "legendFormat": "host cpu", "refId": "A" },
+        { "expr": "1 - (node_memory_MemAvailable_bytes{job=\"node-exporter\"} / node_memory_MemTotal_bytes{job=\"node-exporter\"})", "legendFormat": "host memory", "refId": "B" }
+      ],
+      "title": "Host CPU and Memory",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 24 },
+      "id": 16,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "1 - (node_filesystem_avail_bytes{job=\"node-exporter\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{job=\"node-exporter\",fstype!~\"tmpfs|overlay\"})", "legendFormat": "{{mountpoint}}", "refId": "A" }
+      ],
+      "title": "Host Disk Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 },
+      "id": 17,
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [
+        { "expr": "{container_name=~\"ecommerce-api-.*\"} |= \"request_failed\"", "refId": "A" }
+      ],
+      "title": "API Error Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 },
+      "id": 18,
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [
+        { "expr": "{job=\"ecommerce\"}", "refId": "A" }
+      ],
+      "title": "Service Logs (Podman)",
+      "type": "logs"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 38 },
+      "id": 19,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" },
+      "targets": [
+        { "expr": "max(redis_connected_clients{job=\"redis\"})", "legendFormat": "clients", "refId": "A" }
+      ],
+      "title": "Redis Connected Clients",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 38 },
+      "id": 20,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (db) (redis_db_keys{job=\"redis\"})", "legendFormat": "{{db}} keys", "refId": "A" }
+      ],
+      "title": "Redis Queue and Cache Keys",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 38 },
+      "id": 21,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (mode) (pg_locks_count{job=\"postgres\"})", "legendFormat": "{{mode}}", "refId": "A" }
+      ],
+      "title": "Postgres Lock Wait Signals",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 38 },
+      "id": 22,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" },
+      "targets": [
+        { "expr": "max(pg_replication_lag{job=\"postgres\"})", "legendFormat": "lag", "refId": "A" }
+      ],
+      "title": "Postgres Replication Lag",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 44 },
+      "id": 23,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (container_name) (changes(podman_container_info[1h]))", "legendFormat": "{{container_name}}", "refId": "A" }
+      ],
+      "title": "Container Restarts (Podman)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 44 },
+      "id": 24,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "up", "legendFormat": "{{job}} {{instance}}", "refId": "A" }
+      ],
+      "title": "Exporter and Service Scrape Health",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 44 },
+      "id": 25,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (device) (rate(node_network_receive_bytes_total{job=\"node-exporter\",device!=\"lo\"}[5m]))", "legendFormat": "rx {{device}}", "refId": "A" },
+        { "expr": "sum by (device) (rate(node_network_transmit_bytes_total{job=\"node-exporter\",device!=\"lo\"}[5m]))", "legendFormat": "tx {{device}}", "refId": "B" }
+      ],
+      "title": "Host Network Traffic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 50 },
+      "id": 26,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" },
+      "targets": [
+        { "expr": "time() - node_boot_time_seconds{job=\"node-exporter\"}", "legendFormat": "uptime", "refId": "A" }
+      ],
+      "title": "Host Uptime",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 50 },
+      "id": 27,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (reason) (rate(payment_failure_total{job=\"ecommerce-api\"}[5m]))", "legendFormat": "failure {{reason}}", "refId": "A" },
+        { "expr": "sum by (reason) (rate(payment_webhooks_total{job=\"ecommerce-api\",result=\"ignored\"}[5m]))", "legendFormat": "pending/ignored {{reason}}", "refId": "B" }
+      ],
+      "title": "Payment Failure and Pending Signals",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["ecommerce", "ha", "podman", "observability"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Ecommerce Overview (Podman)",
+  "uid": "ecommerce-overview-podman",
+  "version": 1,
+  "weekStart": ""
+}

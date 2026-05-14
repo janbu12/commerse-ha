@@ -1,5 +1,5 @@
 import { buildApp } from '../src/app.js';
-import { FakeCheckoutRepository, FakeDatabase, FakePaymentRepository, FakeQueue, FakeRedis } from './helpers/fakes.js';
+import { FakeCheckoutRepository, FakeDatabase, FakePaymentRepository, FakeProductRepository, FakeQueue, FakeRedis } from './helpers/fakes.js';
 
 function createApp(repository = new FakeCheckoutRepository(), queue = new FakeQueue()) {
   return {
@@ -8,6 +8,7 @@ function createApp(repository = new FakeCheckoutRepository(), queue = new FakeQu
       redis: new FakeRedis(),
       checkoutRepository: repository,
       paymentRepository: new FakePaymentRepository(),
+      productRepository: new FakeProductRepository(),
       queue,
       config: {
         appInstanceId: 'test-api',

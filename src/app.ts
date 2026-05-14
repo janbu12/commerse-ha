@@ -13,6 +13,9 @@ import { CheckoutService } from './modules/checkout/checkout.service.js';
 import { registerCheckoutRoute } from './modules/checkout/checkout.route.js';
 import { PaymentWebhookHandler } from './modules/payments/webhook.handler.js';
 import { registerPaymentRoute } from './modules/payments/payment.route.js';
+import type { ProductRepository } from './modules/products/product.repository.js';
+import { ProductService } from './modules/products/product.service.js';
+import { registerProductRoute } from './modules/products/product.route.js';
 import { registerHealthRoute } from './health.route.js';
 import { registerMetrics } from './metrics/prometheus.js';
 
@@ -22,6 +25,7 @@ export type AppDependencies = {
   queue: QueuePort;
   checkoutRepository: CheckoutRepository;
   paymentRepository: PaymentRepository;
+  productRepository: ProductRepository;
   config: Pick<AppConfig, 'appInstanceId' | 'midtransWebhookSecret'> &
     Partial<Pick<AppConfig, 'cookieSecret' | 'logLevel'>>;
 };
@@ -69,6 +73,12 @@ export function buildApp(dependencies: AppDependencies) {
     metrics
   );
   registerPaymentRoute(app, paymentWebhookHandler);
+
+  const productService = new ProductService(
+    dependencies.productRepository,
+    dependencies.redis
+  );
+  registerProductRoute(app, productService);
 
   return app;
 }

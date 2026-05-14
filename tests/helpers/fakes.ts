@@ -1,5 +1,6 @@
 import type { CheckoutRepository, CheckoutSnapshot } from '../../src/modules/checkout/checkout.repository.js';
 import type { PaymentRepository } from '../../src/modules/payments/payment.repository.js';
+import type { ProductRepository } from '../../src/modules/products/product.repository.js';
 import type { QueuePort } from '../../src/shared/queue/queue.port.js';
 import type { RedisPort } from '../../src/shared/redis/redis.port.js';
 import type { SqlDatabase } from '../../src/shared/database/database.port.js';
@@ -141,5 +142,36 @@ export class FakePaymentRepository implements PaymentRepository {
     if (order) {
       order.status = 'paid';
     }
+  }
+}
+
+export class FakeProductRepository implements ProductRepository {
+  public products = [
+    {
+      id: '20000000-0000-0000-0000-000000000001',
+      name: 'Sample Product',
+      description: 'Seed product',
+      price: 100000,
+      categoryName: 'Default',
+      createdAt: new Date(),
+      variants: [
+        {
+          id: '30000000-0000-0000-0000-000000000001',
+          sku: 'SAMPLE-001',
+          size: 'M',
+          color: 'Black',
+          price: 100000,
+          stock: 20
+        }
+      ]
+    }
+  ];
+
+  async findMany() {
+    return this.products;
+  }
+
+  async findById(id: string) {
+    return this.products.find((p) => p.id === id) ?? null;
   }
 }

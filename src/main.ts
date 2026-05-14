@@ -5,6 +5,7 @@ import { RedisClient } from './shared/redis/redis-client.js';
 import { BullMqQueue } from './shared/queue/bullmq-queue.js';
 import { PgCheckoutRepository } from './modules/checkout/checkout.repository.js';
 import { PgPaymentRepository } from './modules/payments/payment.repository.js';
+import { PgProductRepository } from './modules/products/product.repository.js';
 
 const config = loadConfig();
 const database = new PgDatabase(config.databaseUrl);
@@ -21,6 +22,7 @@ const app = buildApp({
   queue,
   checkoutRepository: new PgCheckoutRepository(database),
   paymentRepository: new PgPaymentRepository(database),
+  productRepository: new PgProductRepository(database),
   config
 });
 

@@ -20,11 +20,12 @@ services:
   ecommerce-api-1:
     build: .
     container_name: ecommerce-api-1
+    restart: unless-stopped
     environment:
       APP_PORT: 3001
       APP_INSTANCE_ID: api-1
-      DATABASE_URL: postgresql://ecommerce:ecommerce_password@postgres-master:5432/ecommerce
-      DATABASE_REPLICA_URL: postgresql://ecommerce:ecommerce_password@postgres-replica:5432/ecommerce
+      DATABASE_URL: postgresql://ecommerce:ecommerce_password@postgres-pgpool:5432/ecommerce
+      DATABASE_REPLICA_URL: postgresql://ecommerce:ecommerce_password@postgres-standby:5432/ecommerce
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-me-minimum-32-characters}
       COOKIE_SECRET: ${COOKIE_SECRET:-change-me-minimum-32-characters}
@@ -33,7 +34,7 @@ services:
     ports:
       - "3001:3001"
     depends_on:
-      postgres-master:
+      postgres-pgpool:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -49,11 +50,12 @@ services:
   ecommerce-api-2:
     build: .
     container_name: ecommerce-api-2
+    restart: unless-stopped
     environment:
       APP_PORT: 3001
       APP_INSTANCE_ID: api-2
-      DATABASE_URL: postgresql://ecommerce:ecommerce_password@postgres-master:5432/ecommerce
-      DATABASE_REPLICA_URL: postgresql://ecommerce:ecommerce_password@postgres-replica:5432/ecommerce
+      DATABASE_URL: postgresql://ecommerce:ecommerce_password@postgres-pgpool:5432/ecommerce
+      DATABASE_REPLICA_URL: postgresql://ecommerce:ecommerce_password@postgres-standby:5432/ecommerce
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-me-minimum-32-characters}
       COOKIE_SECRET: ${COOKIE_SECRET:-change-me-minimum-32-characters}
@@ -62,7 +64,7 @@ services:
     ports:
       - "3002:3001"
     depends_on:
-      postgres-master:
+      postgres-pgpool:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -78,11 +80,12 @@ services:
   ecommerce-api-3:
     build: .
     container_name: ecommerce-api-3
+    restart: unless-stopped
     environment:
       APP_PORT: 3001
       APP_INSTANCE_ID: api-3
-      DATABASE_URL: postgresql://ecommerce:ecommerce_password@postgres-master:5432/ecommerce
-      DATABASE_REPLICA_URL: postgresql://ecommerce:ecommerce_password@postgres-replica:5432/ecommerce
+      DATABASE_URL: postgresql://ecommerce:ecommerce_password@postgres-pgpool:5432/ecommerce
+      DATABASE_REPLICA_URL: postgresql://ecommerce:ecommerce_password@postgres-standby:5432/ecommerce
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-me-minimum-32-characters}
       COOKIE_SECRET: ${COOKIE_SECRET:-change-me-minimum-32-characters}
@@ -91,7 +94,7 @@ services:
     ports:
       - "3003:3001"
     depends_on:
-      postgres-master:
+      postgres-pgpool:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -104,21 +107,31 @@ services:
     networks:
       - ecommerce-network
 
-  postgres-master:
-    image: bitnamilegacy/postgresql:16
-    container_name: postgres-master
+  postgres-primary:
+    image: bitnamilegacy/postgresql-repmgr:16
+    container_name: postgres-primary
+    stop_grace_period: 1m
     environment:
-      POSTGRESQL_REPLICATION_MODE: master
-      POSTGRESQL_REPLICATION_USER: replicator
-      POSTGRESQL_REPLICATION_PASSWORD: replication_password
+      POSTGRESQL_POSTGRES_PASSWORD: postgres_password
       POSTGRESQL_USERNAME: ecommerce
       POSTGRESQL_PASSWORD: ecommerce_password
       POSTGRESQL_DATABASE: ecommerce
-      POSTGRESQL_POSTGRES_PASSWORD: postgres_password
+      REPMGR_USERNAME: repmgr
+      REPMGR_PASSWORD: repmgr_password
+      REPMGR_PRIMARY_HOST: postgres-primary
+      REPMGR_PRIMARY_PORT: 5432
+      REPMGR_PARTNER_NODES: postgres-primary,postgres-standby
+      REPMGR_NODE_ID: 1
+      REPMGR_NODE_NAME: pg-0
+      REPMGR_NODE_NETWORK_NAME: postgres-primary
+      REPMGR_PORT_NUMBER: 5432
+      REPMGR_CONNECT_TIMEOUT: 3
+      REPMGR_RECONNECT_ATTEMPTS: 3
+      REPMGR_RECONNECT_INTERVAL: 3
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
-      - postgres-master-data:/bitnami/postgresql
+      - postgres-primary-data:/bitnami/postgresql
       - ./database/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ecommerce -d ecommerce"]
@@ -129,26 +142,70 @@ services:
     networks:
       - ecommerce-network
 
-  postgres-replica:
-    image: bitnamilegacy/postgresql:16
-    container_name: postgres-replica
+  postgres-standby:
+    image: bitnamilegacy/postgresql-repmgr:16
+    container_name: postgres-standby
+    stop_grace_period: 1m
     environment:
-      POSTGRESQL_REPLICATION_MODE: slave
-      POSTGRESQL_REPLICATION_USER: replicator
-      POSTGRESQL_REPLICATION_PASSWORD: replication_password
-      POSTGRESQL_MASTER_HOST: postgres-master
-      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+      POSTGRESQL_POSTGRES_PASSWORD: postgres_password
       POSTGRESQL_USERNAME: ecommerce
       POSTGRESQL_PASSWORD: ecommerce_password
       POSTGRESQL_DATABASE: ecommerce
-      POSTGRESQL_POSTGRES_PASSWORD: postgres_password
+      REPMGR_USERNAME: repmgr
+      REPMGR_PASSWORD: repmgr_password
+      REPMGR_PRIMARY_HOST: postgres-primary
+      REPMGR_PRIMARY_PORT: 5432
+      REPMGR_PARTNER_NODES: postgres-primary,postgres-standby
+      REPMGR_NODE_ID: 2
+      REPMGR_NODE_NAME: pg-1
+      REPMGR_NODE_NETWORK_NAME: postgres-standby
+      REPMGR_PORT_NUMBER: 5432
+      REPMGR_CONNECT_TIMEOUT: 3
+      REPMGR_RECONNECT_ATTEMPTS: 3
+      REPMGR_RECONNECT_INTERVAL: 3
     ports:
       - "5433:5432"
     depends_on:
-      postgres-master:
+      postgres-primary:
         condition: service_healthy
     volumes:
-      - postgres-replica-data:/bitnami/postgresql
+      - postgres-standby-data:/bitnami/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce -d ecommerce"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks:
+      - ecommerce-network
+
+  postgres-pgpool:
+    image: bitnamilegacy/pgpool:4
+    container_name: postgres-pgpool
+    environment:
+      PGPOOL_BACKEND_NODES: 0:postgres-primary:5432,1:postgres-standby:5432
+      PGPOOL_SR_CHECK_USER: repmgr
+      PGPOOL_SR_CHECK_PASSWORD: repmgr_password
+      PGPOOL_POSTGRES_USERNAME: postgres
+      PGPOOL_POSTGRES_PASSWORD: postgres_password
+      PGPOOL_ADMIN_USERNAME: admin
+      PGPOOL_ADMIN_PASSWORD: pgpool_admin_password
+      PGPOOL_ENABLE_LOAD_BALANCING: "yes"
+      PGPOOL_POSTGRES_CUSTOM_USERS: ecommerce
+      PGPOOL_POSTGRES_CUSTOM_PASSWORDS: ecommerce_password
+    ports:
+      - "5432:5432"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      postgres-standby:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/opt/bitnami/scripts/pgpool/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     networks:
       - ecommerce-network
 
@@ -268,11 +325,11 @@ services:
     image: prometheuscommunity/postgres-exporter:v0.16.0
     container_name: ecommerce-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: postgresql://postgres:postgres_password@postgres-master:5432/ecommerce?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://postgres:postgres_password@postgres-pgpool:5432/ecommerce?sslmode=disable
     ports:
       - "9187:9187"
     depends_on:
-      postgres-master:
+      postgres-pgpool:
         condition: service_healthy
     networks:
       - ecommerce-network
@@ -282,7 +339,7 @@ networks:
     driver: bridge
 
 volumes:
-  postgres-master-data:
-  postgres-replica-data:
+  postgres-primary-data:
+  postgres-standby-data:
   redis-data:
   grafana-data:

@@ -6,12 +6,13 @@ High-availability e-commerce backend built with Fastify, TypeScript, PostgreSQL,
 
 ![System architecture](docs/Untitled-2025-10-25-2007.png)
 
-The stack runs three API instances behind HAProxy. PostgreSQL stores checkout and payment data, Redis is used for queue/cache infrastructure, Prometheus scrapes application and infrastructure metrics, Grafana visualizes the system, and Loki stores container logs collected by Promtail.
+The stack runs three API instances behind HAProxy. PostgreSQL runs as a repmgr-managed primary/standby pair behind Pgpool, Redis is used for queue/cache infrastructure, Prometheus scrapes application and infrastructure metrics, Grafana visualizes the system, and Loki stores container logs collected by Promtail.
 
 ## What This Demonstrates
 
 - Fastify API with TypeScript and layered modules.
 - HAProxy load balancing across `api-1`, `api-2`, and `api-3`.
+- PostgreSQL primary/standby failover with repmgr and Pgpool.
 - Health checks with PostgreSQL and Redis dependency checks.
 - Checkout flow with transactional database boundaries.
 - Idempotent payment webhook handling with HMAC signature validation.
@@ -97,6 +98,9 @@ docker compose up --build
 | API instance 1 | `http://localhost:3001/health` | Direct instance check |
 | API instance 2 | `http://localhost:3002/health` | Direct instance check |
 | API instance 3 | `http://localhost:3003/health` | Direct instance check |
+| PostgreSQL via Pgpool | `localhost:5432` | Stable database endpoint |
+| PostgreSQL standby | `localhost:5433` | Direct standby node access |
+| PostgreSQL initial primary | `localhost:5434` | Direct initial primary node access |
 | Grafana | `http://localhost:3000` | Default local credentials: `admin` / `admin` |
 | Prometheus | `http://localhost:9090` | Targets and PromQL |
 | HAProxy stats | `http://localhost:8404/stats` | Backend state and traffic |
@@ -134,7 +138,7 @@ curl -X POST http://localhost/checkout \
   -d '{"userId":"00000000-0000-0000-0000-000000000001"}'
 ```
 
-## Failover Demo
+## API Failover Demo
 
 Stop one API instance:
 
@@ -168,6 +172,48 @@ Expected value after the health check recovers:
 ```text
 haproxy_server_status{proxy="ecommerce_api",server="api2",state="UP"} 1
 ```
+
+## PostgreSQL Failover Demo
+
+The API connects to Pgpool instead of a specific PostgreSQL node:
+
+```text
+API -> postgres-pgpool -> active PostgreSQL primary
+```
+
+In the normal state, `postgres-primary` is primary and `postgres-standby` is read-only. When `postgres-primary` is stopped, repmgr promotes `postgres-standby` and Pgpool routes new database connections to it.
+
+Check Pgpool node status:
+
+```bash
+docker exec -e PGPASSWORD=ecommerce_password postgres-pgpool \
+  psql -h 127.0.0.1 -U ecommerce -d ecommerce -c "SHOW pool_nodes;"
+```
+
+Simulate the initial primary going down:
+
+```bash
+docker compose stop postgres-primary
+```
+
+Poll API health until promotion completes:
+
+```bash
+for i in {1..30}; do
+  curl -s -o /dev/null -w "%{http_code}\n" http://localhost/health
+  sleep 3
+done
+```
+
+Verify the promoted node accepts writes:
+
+```bash
+curl -X POST http://localhost/checkout \
+  -H "content-type: application/json" \
+  -d '{"userId":"00000000-0000-0000-0000-000000000001"}'
+```
+
+There can be a short transient failure window while repmgr promotes the standby and Pgpool detaches the old primary. After promotion, the API should recover through `postgres-pgpool` without changing `DATABASE_URL`.
 
 ## Project Structure
 

@@ -10,6 +10,10 @@ export class PgDatabase implements SqlDatabase {
 
   constructor(connectionString: string) {
     this.pool = new Pool({ connectionString });
+    this.pool.on('error', () => {
+      // The pool can emit idle client errors when Pgpool/repmgr drops old
+      // connections during failover. Queries get fresh clients on demand.
+    });
   }
 
   async query<T extends pg.QueryResultRow = pg.QueryResultRow>(text: string, values: unknown[] = []) {

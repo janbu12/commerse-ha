@@ -6,6 +6,8 @@ import { BullMqQueue } from './shared/queue/bullmq-queue.js';
 import { PgCheckoutRepository } from './modules/checkout/checkout.repository.js';
 import { PgPaymentRepository } from './modules/payments/payment.repository.js';
 import { PgProductRepository } from './modules/products/product.repository.js';
+import { PgCartRepository } from './modules/cart/cart.repository.js';
+import { PgOrderRepository } from './modules/orders/order.repository.js';
 
 const config = loadConfig();
 const database = new PgDatabase(config.databaseUrl);
@@ -23,6 +25,8 @@ const app = buildApp({
   checkoutRepository: new PgCheckoutRepository(database),
   paymentRepository: new PgPaymentRepository(database),
   productRepository: new PgProductRepository(database),
+  cartRepository: new PgCartRepository(database),
+  orderRepository: new PgOrderRepository(database),
   config
 });
 

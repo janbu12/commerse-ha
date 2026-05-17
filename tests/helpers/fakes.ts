@@ -1,4 +1,6 @@
 import type { CheckoutRepository, CheckoutSnapshot } from '../../src/modules/checkout/checkout.repository.js';
+import type { Cart, CartItem, CartRepository, ProductVariantForCart } from '../../src/modules/cart/cart.repository.js';
+import type { OrderDetail, OrderRepository, OrderSummary } from '../../src/modules/orders/order.repository.js';
 import type { PaymentRepository } from '../../src/modules/payments/payment.repository.js';
 import type { ProductRepository } from '../../src/modules/products/product.repository.js';
 import type { QueuePort } from '../../src/shared/queue/queue.port.js';
@@ -142,6 +144,151 @@ export class FakePaymentRepository implements PaymentRepository {
     if (order) {
       order.status = 'paid';
     }
+  }
+}
+
+export class FakeCartRepository implements CartRepository {
+  public items = new Map<string, CartItem>([
+    [
+      'variant-1',
+      {
+        id: 'cart-item-1',
+        productVariantId: 'variant-1',
+        sku: 'SAMPLE-001',
+        productName: 'Sample Product',
+        variantLabel: 'M / Black',
+        quantity: 2,
+        unitPrice: 100000,
+        lineTotal: 200000,
+        availableStock: 20
+      }
+    ]
+  ]);
+  public variants = new Map<string, ProductVariantForCart>([
+    ['variant-1', { id: 'variant-1', price: 100000, stockQuantity: 20 }],
+    ['variant-2', { id: 'variant-2', price: 125000, stockQuantity: 12 }]
+  ]);
+
+  async findByUserId(userId: string): Promise<Cart | null> {
+    const items = Array.from(this.items.values()).map((item) => ({
+      ...item,
+      lineTotal: item.quantity * item.unitPrice
+    }));
+
+    return {
+      id: 'cart-1',
+      userId,
+      totalAmount: items.reduce((sum, item) => sum + item.lineTotal, 0),
+      items
+    };
+  }
+
+  async findVariantById(productVariantId: string) {
+    return this.variants.get(productVariantId) ?? null;
+  }
+
+  async findItemById(itemId: string) {
+    return Array.from(this.items.values()).find((candidate) => candidate.id === itemId) ?? null;
+  }
+
+  async addItem(input: { productVariantId: string; quantity: number }) {
+    const current = this.items.get(input.productVariantId);
+    if (current) {
+      if (current.quantity + input.quantity > current.availableStock) {
+        return null;
+      }
+
+      current.quantity += input.quantity;
+      current.lineTotal = current.quantity * current.unitPrice;
+      return current;
+    }
+
+    const variant = this.variants.get(input.productVariantId)!;
+    const item: CartItem = {
+      id: 'cart-item-2',
+      productVariantId: input.productVariantId,
+      sku: 'SAMPLE-002',
+      productName: 'Sample Product',
+      variantLabel: 'L / White',
+      quantity: input.quantity,
+      unitPrice: variant.price,
+      lineTotal: input.quantity * variant.price,
+      availableStock: variant.stockQuantity
+    };
+    this.items.set(input.productVariantId, item);
+    return item;
+  }
+
+  async updateItemQuantity(itemId: string, quantity: number) {
+    const item = await this.findItemById(itemId);
+    if (!item) {
+      return null;
+    }
+
+    if (quantity > item.availableStock) {
+      return null;
+    }
+
+    item.quantity = quantity;
+    item.lineTotal = item.quantity * item.unitPrice;
+    return item;
+  }
+
+  async deleteItem(itemId: string) {
+    const item = Array.from(this.items.values()).find((candidate) => candidate.id === itemId);
+    if (!item) {
+      return false;
+    }
+
+    return this.items.delete(item.productVariantId);
+  }
+}
+
+export class FakeOrderRepository implements OrderRepository {
+  public summary: OrderSummary = {
+    id: 'order-1',
+    userId: 'user-1',
+    status: 'paid',
+    totalAmount: 200000,
+    paymentStatus: 'success',
+    itemCount: 2,
+    createdAt: new Date('2026-05-12T10:00:00.000Z')
+  };
+  public detail: OrderDetail = {
+    ...this.summary,
+    items: [
+      {
+        productVariantId: 'variant-1',
+        sku: 'SAMPLE-001',
+        productName: 'Sample Product',
+        variantLabel: 'M / Black',
+        quantity: 2,
+        unitPrice: 100000,
+        lineTotal: 200000
+      }
+    ],
+    payment: {
+      paymentReference: 'PAY-1',
+      gateway: 'midtrans',
+      status: 'success',
+      amount: 200000,
+      paidAt: new Date('2026-05-12T10:05:00.000Z')
+    },
+    shipment: {
+      courier: 'JNE',
+      trackingNumber: 'JNE-001',
+      status: 'delivered',
+      shippedAt: new Date('2026-05-12T11:00:00.000Z'),
+      deliveredAt: new Date('2026-05-13T11:00:00.000Z')
+    }
+  };
+
+  async findManyByUserId(userId: string) {
+    return this.summary.userId === userId ? [this.summary] : [];
+  }
+
+  async findById(id: string) {
+    return this.detail.id === id ? this.detail : null;
   }
 }
 

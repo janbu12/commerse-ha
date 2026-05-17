@@ -16,6 +16,12 @@ import { registerPaymentRoute } from './modules/payments/payment.route.js';
 import type { ProductRepository } from './modules/products/product.repository.js';
 import { ProductService } from './modules/products/product.service.js';
 import { registerProductRoute } from './modules/products/product.route.js';
+import type { CartRepository } from './modules/cart/cart.repository.js';
+import { CartService } from './modules/cart/cart.service.js';
+import { registerCartRoute } from './modules/cart/cart.route.js';
+import type { OrderRepository } from './modules/orders/order.repository.js';
+import { OrderService } from './modules/orders/order.service.js';
+import { registerOrderRoute } from './modules/orders/order.route.js';
 import { registerHealthRoute } from './health.route.js';
 import { registerMetrics } from './metrics/prometheus.js';
 
@@ -26,6 +32,8 @@ export type AppDependencies = {
   checkoutRepository: CheckoutRepository;
   paymentRepository: PaymentRepository;
   productRepository: ProductRepository;
+  cartRepository: CartRepository;
+  orderRepository: OrderRepository;
   config: Pick<AppConfig, 'appInstanceId' | 'midtransWebhookSecret'> &
     Partial<Pick<AppConfig, 'cookieSecret' | 'logLevel'>>;
 };
@@ -79,6 +87,12 @@ export function buildApp(dependencies: AppDependencies) {
     dependencies.redis
   );
   registerProductRoute(app, productService);
+
+  const cartService = new CartService(dependencies.cartRepository);
+  registerCartRoute(app, cartService);
+
+  const orderService = new OrderService(dependencies.orderRepository);
+  registerOrderRoute(app, orderService);
 
   return app;
 }

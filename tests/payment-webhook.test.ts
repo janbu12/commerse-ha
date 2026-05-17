@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { buildApp } from '../src/app.js';
-import { FakeCheckoutRepository, FakeDatabase, FakePaymentRepository, FakeProductRepository, FakeQueue, FakeRedis } from './helpers/fakes.js';
+import { FakeCartRepository, FakeCheckoutRepository, FakeDatabase, FakeOrderRepository, FakePaymentRepository, FakeProductRepository, FakeQueue, FakeRedis } from './helpers/fakes.js';
 
 function signature(reference: string, status: string, secret: string) {
   return crypto.createHmac('sha256', secret).update(`${reference}:${status}`).digest('hex');
@@ -13,6 +13,8 @@ function createApp(repository = new FakePaymentRepository(), queue = new FakeQue
       redis: new FakeRedis(),
       checkoutRepository: new FakeCheckoutRepository(),
       productRepository: new FakeProductRepository(),
+      cartRepository: new FakeCartRepository(),
+      orderRepository: new FakeOrderRepository(),
       paymentRepository: repository,
       queue,
       config: {

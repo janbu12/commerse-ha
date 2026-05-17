@@ -90,6 +90,62 @@ Start the full stack:
 docker compose up --build
 ```
 
+### Safer Docker Compose Startup
+
+PostgreSQL replication and Redis can take longer to become healthy on the first run. If `docker compose up --build` races dependency health checks on your machine, start the stack in phases:
+
+```bash
+docker compose up -d --build postgres-primary redis
+```
+
+Wait until both are healthy:
+
+```bash
+docker compose ps postgres-primary redis
+```
+
+Then start the standby and Pgpool:
+
+```bash
+docker compose up -d postgres-standby postgres-pgpool
+```
+
+Wait until both are healthy:
+
+```bash
+docker compose ps postgres-standby postgres-pgpool
+```
+
+Then start the API layer:
+
+```bash
+docker compose up -d --build ecommerce-api-1 ecommerce-api-2 ecommerce-api-3 haproxy
+```
+
+Finally start observability services:
+
+```bash
+docker compose up -d prometheus grafana loki promtail cadvisor container-name-exporter node-exporter redis-exporter postgres-exporter
+```
+
+Check the app:
+
+```bash
+curl http://localhost/health
+```
+
+For a clean rebuild without deleting volumes:
+
+```bash
+docker compose up -d --build --remove-orphans
+```
+
+Only use this when you intentionally want to reset database and Grafana data:
+
+```bash
+docker compose down -v --remove-orphans
+```
+
 ## Useful URLs
 
 | Service | URL | Notes |
@@ -215,6 +271,35 @@ curl -X POST http://localhost/checkout \
 
 There can be a short transient failure window while repmgr promotes the standby and Pgpool detaches the old primary. After promotion, the API should recover through `postgres-pgpool` without changing `DATABASE_URL`.
 
+### Rejoin the Old Primary
+
+Do not start the old `postgres-primary` as a primary again after failover. Rejoin it as a fresh standby instead:
+
+```text
+After failover:
+postgres-standby = primary
+postgres-primary = stale old primary
+
+After rejoin:
+postgres-standby = primary
+postgres-primary = standby
+```
+
+Run the controlled rejoin script:
+
+```bash
+./scripts/postgres-rejoin-primary.sh
+```
+
+The script removes the stale `postgres-primary` volume, starts `postgres-primary` again, waits until it reports `pg_is_in_recovery() = true`, recreates Pgpool, and prints `SHOW pool_nodes;`.
+
+Expected final shape:
+
+```text
+postgres-standby  primary
+postgres-primary  standby
+```
+
 ## Project Structure
 
 ```text
@@ -230,6 +315,7 @@ infra/
   loki/                 Loki config
   promtail/             Log collector config
   container-name-exporter/
+scripts/                Operational scripts for local HA demos
 docs/                   Architecture and observability screenshots
 tests/                  Vitest test suite
 ```
